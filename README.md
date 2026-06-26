@@ -28,3 +28,11 @@ The following stylesheet files are maintained in this repository and linked as T
 * `footer.css`: Unified footer layouts.
 * `print.css`: Print media optimizations.
 * `login.css`: Standardized PIN login screen styles.
+
+### 4. Shared Rust Utility (shared-rust)
+A lightweight Rust module containing helper functions and utilities shared across the companion app backends:
+* **Crate Dependency**: Declared in backends as `shared-assets` pointing to `shared-rust`.
+* **Unauthorized Console Access**: 
+  - Function: `shared_assets::print_unauthorized_console_message()`
+  - Purpose: Clears the terminal screen and outputs a stylized security warning alert (cowsay format) notifying users that interactive shell access is unauthorized and disabled inside secure, read-only Nix containers. Useful for overriding custom debug or shell binaries in Nix builds.
+
