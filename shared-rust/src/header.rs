@@ -11,6 +11,16 @@ pub struct HeaderProps {
     pub is_authenticated: bool,
     pub pin_required: bool,
     pub on_logout: Callback<MouseEvent>,
+    
+    #[prop_or_default]
+    pub logout_tooltip: String,
+    #[prop_or_default]
+    pub theme_toggle_tooltip: String,
+    #[prop_or_default]
+    pub print_tooltip: String,
+    #[prop_or_default]
+    pub on_print: Callback<MouseEvent>,
+
     pub disable_print: bool,
     pub enable_translation: bool,
     pub enable_themes: bool,
@@ -63,44 +73,60 @@ pub fn header(props: &HeaderProps) -> Html {
         },
     };
 
-    let theme_toggle_tooltip = match language {
-        Language::Chinese => "切换主题",
-        Language::Spanish => "Cambiar tema",
-        Language::German => "Design umschalten",
-        Language::Japanese => "テーマ切り替え",
-        Language::French => "Changer de thème",
-        Language::Portuguese => "Alternar tema",
-        Language::Russian => "Переключить тему",
-        _ => "Toggle theme",
-    };
-
-    let print_tooltip = match language {
-        Language::Chinese => "打印",
-        Language::Spanish => "Imprimir",
-        Language::German => "Drucken",
-        Language::Japanese => "印刷",
-        Language::French => "Imprimer",
-        Language::Portuguese => "Imprimir",
-        Language::Russian => "Печать",
-        _ => "Print",
-    };
-
-    let logout_tooltip = match language {
-        Language::Chinese => "退出登录",
-        Language::Spanish => "Cerrar sesión",
-        Language::German => "Abmelden",
-        Language::Japanese => "ログアウト",
-        Language::French => "Se déconnecter",
-        Language::Portuguese => "Sair",
-        Language::Russian => "Выйти",
-        _ => "Log out",
-    };
-
-    let on_print = Callback::from(|_| {
-        if let Some(window) = web_sys::window() {
-            let _ = window.print();
+    let theme_toggle_tooltip = if !props.theme_toggle_tooltip.is_empty() {
+        props.theme_toggle_tooltip.clone()
+    } else {
+        match language {
+            Language::Chinese => "切换主题".to_string(),
+            Language::Spanish => "Cambiar tema".to_string(),
+            Language::German => "Design umschalten".to_string(),
+            Language::Japanese => "テーマ切り替え".to_string(),
+            Language::French => "Changer de thème".to_string(),
+            Language::Portuguese => "Alternar tema".to_string(),
+            Language::Russian => "Переключить тему".to_string(),
+            _ => "Toggle theme".to_string(),
         }
-    });
+    };
+
+    let print_tooltip = if !props.print_tooltip.is_empty() {
+        props.print_tooltip.clone()
+    } else {
+        match language {
+            Language::Chinese => "打印".to_string(),
+            Language::Spanish => "Imprimir".to_string(),
+            Language::German => "Drucken".to_string(),
+            Language::Japanese => "印刷".to_string(),
+            Language::French => "Imprimer".to_string(),
+            Language::Portuguese => "Imprimir".to_string(),
+            Language::Russian => "Печать".to_string(),
+            _ => "Print".to_string(),
+        }
+    };
+
+    let logout_tooltip = if !props.logout_tooltip.is_empty() {
+        props.logout_tooltip.clone()
+    } else {
+        match language {
+            Language::Chinese => "退出登录".to_string(),
+            Language::Spanish => "Cerrar sesión".to_string(),
+            Language::German => "Abmelden".to_string(),
+            Language::Japanese => "ログアウト".to_string(),
+            Language::French => "Se déconnecter".to_string(),
+            Language::Portuguese => "Sair".to_string(),
+            Language::Russian => "Выйти".to_string(),
+            _ => "Log out".to_string(),
+        }
+    };
+
+    let on_print = if props.on_print != Callback::default() {
+        props.on_print.clone()
+    } else {
+        Callback::from(|_| {
+            if let Some(window) = web_sys::window() {
+                let _ = window.print();
+            }
+        })
+    };
 
     html! {
         <header>
@@ -170,7 +196,7 @@ pub fn header(props: &HeaderProps) -> Html {
                             class="icon-button"
                             onclick={onclick_handler}
                             disabled={disabled}
-                            title={if disabled { "".to_string() } else { logout_tooltip.to_string() }}
+                            title={if disabled { "".to_string() } else { logout_tooltip.clone() }}
                         >
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
