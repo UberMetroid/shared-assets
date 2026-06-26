@@ -1,0 +1,10 @@
+/home/jeryd/Projects/ubermetroid/shared-assets/shared-rust/target/debug/deps/implicit_clone-efebb3517b391cbd.d: /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/lib.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/sync.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/array.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/map.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/string.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/unsync.rs
+
+/home/jeryd/Projects/ubermetroid/shared-assets/shared-rust/target/debug/deps/libimplicit_clone-efebb3517b391cbd.rmeta: /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/lib.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/sync.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/array.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/map.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/string.rs /home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/unsync.rs
+
+/home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/lib.rs:
+/home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/sync.rs:
+/home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/array.rs:
+/home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/map.rs:
+/home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/string.rs:
+/home/jeryd/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/implicit-clone-0.6.0/src/unsync.rs:

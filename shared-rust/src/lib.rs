@@ -4,6 +4,9 @@ pub mod i18n;
 #[cfg(feature = "frontend")]
 pub mod header;
 
+#[cfg(feature = "frontend")]
+pub mod footer;
+
 pub fn print_unauthorized_console_message() {
     // Clear screen
     print!("\x1B[2J\x1B[1;1H");
