@@ -5,6 +5,7 @@
 //! races `env::set_var` across tests. The `ENV_LOCK` mutex serializes them.
 
 use super::*;
+use serial_test::serial;
 use std::env;
 use std::sync::Mutex;
 
@@ -229,10 +230,11 @@ fn lockout_duration_scales_with_minutes() {
 
 #[test]
 fn parse_trusted_proxies_handles_cidrs() {
-    unsafe { env::set_var("TRUSTED_PROXY_IPS", "10.0.0.0/8, 192.168.1.0/24, garbage") };
-    let cfg = ServerConfig::from_env("X");
-    assert_eq!(cfg.trusted_proxies.len(), 2, "garbage should be skipped");
-    unsafe { env::remove_var("TRUSTED_PROXY_IPS") };
+    with_clean_env(&["TRUSTED_PROXY_IPS"], || {
+        unsafe { env::set_var("TRUSTED_PROXY_IPS", "10.0.0.0/8, 192.168.1.0/24, garbage") };
+        let cfg = ServerConfig::from_env("X");
+        assert_eq!(cfg.trusted_proxies.len(), 2, "garbage should be skipped");
+    });
 }
 
 #[test]

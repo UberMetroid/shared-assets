@@ -34,3 +34,4 @@ yew = { version = "0.23", features = ["csr"], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "time"] }
+serial_test = "3"

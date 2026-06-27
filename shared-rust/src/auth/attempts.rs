@@ -114,23 +114,39 @@ pub fn attempts_left(ip: &str, max_attempts: u32, lockout_duration: std::time::D
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
+    use std::sync::Mutex;
 
-    fn reset_for_test() {
+    /// All tests in this module mutate the process-global
+    /// `login_attempts()` map. Running them in parallel produces
+    /// races that show up as flaky failures. The `ATTEMPTS_LOCK`
+    /// mutex serializes them, matching the pattern in
+    /// `server/tests.rs`.
+    static ATTEMPTS_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Clear the global map and return a guard that holds
+    /// `ATTEMPTS_LOCK` until dropped. Tests do
+    /// `let _g = reset_for_test();` to acquire the lock for the
+    /// duration of the test body.
+    fn reset_for_test() -> std::sync::MutexGuard<'static, ()> {
         if let Ok(mut map) = login_attempts().lock() {
             map.clear();
         }
+        ATTEMPTS_LOCK.lock().unwrap_or_else(|e| e.into_inner())
     }
 
+    #[serial]
     #[test]
     fn starts_unlocked() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         assert!(!is_locked_out("1.2.3.4", 3, lockout));
     }
 
+    #[serial]
     #[test]
     fn locks_after_max_attempts() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         for _ in 0..3 {
             record_attempt("1.2.3.4");
@@ -138,18 +154,20 @@ mod tests {
         assert!(is_locked_out("1.2.3.4", 3, lockout));
     }
 
+    #[serial]
     #[test]
     fn not_locked_below_threshold() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         record_attempt("1.2.3.4");
         record_attempt("1.2.3.4");
         assert!(!is_locked_out("1.2.3.4", 3, lockout));
     }
 
+    #[serial]
     #[test]
     fn reset_clears_lockout() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         for _ in 0..3 {
             record_attempt("1.2.3.4");
@@ -159,9 +177,10 @@ mod tests {
         assert!(!is_locked_out("1.2.3.4", 3, lockout));
     }
 
+    #[serial]
     #[test]
     fn distinct_ips_are_independent() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         for _ in 0..3 {
             record_attempt("1.1.1.1");
@@ -170,18 +189,20 @@ mod tests {
         assert!(!is_locked_out("2.2.2.2", 3, lockout));
     }
 
+    #[serial]
     #[test]
     fn remaining_secs_zero_when_not_locked() {
-        reset_for_test();
+        let _g = reset_for_test();
         assert_eq!(
             lockout_remaining_secs("1.2.3.4", std::time::Duration::from_secs(60)),
             0
         );
     }
 
+    #[serial]
     #[test]
     fn remaining_secs_positive_when_locked() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         for _ in 0..3 {
             record_attempt("1.2.3.4");
@@ -190,47 +211,53 @@ mod tests {
         assert!(remaining > 0 && remaining <= 60);
     }
 
+    #[serial]
     #[test]
     fn current_attempts_zero_when_unknown() {
-        reset_for_test();
+        let _g = reset_for_test();
         assert_eq!(current_attempts("9.9.9.9"), 0);
     }
 
+    #[serial]
     #[test]
     fn current_attempts_reflects_recordings() {
-        reset_for_test();
+        let _g = reset_for_test();
         record_attempt("9.9.9.9");
         record_attempt("9.9.9.9");
         assert_eq!(current_attempts("9.9.9.9"), 2);
     }
 
+    #[serial]
     #[test]
     fn current_attempts_cleared_after_reset() {
-        reset_for_test();
+        let _g = reset_for_test();
         record_attempt("9.9.9.9");
         reset_attempts("9.9.9.9");
         assert_eq!(current_attempts("9.9.9.9"), 0);
     }
 
+    #[serial]
     #[test]
     fn attempts_left_max_when_no_attempts() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         assert_eq!(attempts_left("9.9.9.9", 5, lockout), 5);
     }
 
+    #[serial]
     #[test]
     fn attempts_left_decreases_with_failures() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         record_attempt("9.9.9.9");
         record_attempt("9.9.9.9");
         assert_eq!(attempts_left("9.9.9.9", 5, lockout), 3);
     }
 
+    #[serial]
     #[test]
     fn attempts_left_zero_when_locked() {
-        reset_for_test();
+        let _g = reset_for_test();
         let lockout = std::time::Duration::from_secs(60);
         for _ in 0..5 {
             record_attempt("9.9.9.9");
