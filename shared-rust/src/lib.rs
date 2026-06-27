@@ -1,50 +1,46 @@
 //! Shared code for UberMetroid companion apps.
 //!
+//! This crate is consumed by both the apps' native server binaries
+//! (which use the `backend` feature) and their Yew/WASM frontends
+//! (which use the `frontend` feature). See the `Cargo.toml` for the
+//! feature list.
+//!
 //! Provides:
 //!
 //! - Yew components (frontend): [`components::Header`], [`components::Footer`]
-//! - Theme management: [`theme::Theme`], [`theme::mapping::Scheme`]
-//! - Internationalization: [`i18n::Language`], [`i18n::strings::lookup`]
-//! - Backend primitives: [`server::ServerConfig`], [`server::serve`]
-//! - Authentication: [`auth::pin_auth_layer`], [`auth::attempts`]
-//! - Shared middleware: [`middleware::cors_layer`], [`middleware::security_headers_layer`],
+//! - Theme management (frontend): [`theme::Theme`], [`theme::mapping::Scheme`]
+//! - Internationalization (both): [`i18n::Language`], [`i18n::strings::lookup`]
+//! - Backend primitives (backend): [`server::ServerConfig`], [`server::serve`]
+//! - Authentication (backend): [`auth::pin_auth_layer`], [`auth::attempts`]
+//! - Shared middleware (backend): [`middleware::cors_layer`],
+//!   [`middleware::security_headers_layer`],
 //!   [`middleware::title_injection_layer`], [`middleware::hsts_layer`]
-//! - Security helpers: [`security::print_unauthorized_console_message`]
+//! - Security helpers (both): [`security::print_unauthorized_console_message`]
 //!
 //! ## Cargo dependency
 //!
 //! ```toml
-//! [dependencies]
-//! shared-assets = { git = "https://github.com/UberMetroid/shared-assets", tag = "v3.0.0" }
-//! ```
+//! # backend/Cargo.toml
+//! shared-assets = { path = "...", default-features = false, features = ["backend"] }
 //!
-//! ## Example: minimal backend
-//!
-//! ```no_run
-//! use shared_assets::server::{ServerConfig, serve};
-//! use shared_assets::middleware::{cors_layer, security_headers_layer};
-//! use axum::{Router, routing::get};
-//!
-//! async fn run() {
-//!     let config = ServerConfig::from_env("BEAM");
-//!     let app = Router::new()
-//!         .route("/health", get(|| async { "ok" }))
-//!         .layer(axum::middleware::from_fn(security_headers_layer))
-//!         .layer(cors_layer(&config));
-//!
-//!     serve(config, app).await.unwrap();
-//! }
+//! # frontend/Cargo.toml
+//! shared-assets = { path = "...", default-features = false, features = ["frontend"] }
 //! ```
 
+#[cfg(feature = "backend")]
 pub mod auth;
-pub mod i18n;
+#[cfg(feature = "backend")]
 pub mod middleware;
-pub mod security;
+#[cfg(feature = "backend")]
 pub mod server;
+
+// Used by both backend and frontend.
+pub mod i18n;
+#[cfg(feature = "backend")]
+pub mod security;
 
 #[cfg(feature = "frontend")]
 pub mod components;
-
 #[cfg(feature = "frontend")]
 pub mod theme;
 
