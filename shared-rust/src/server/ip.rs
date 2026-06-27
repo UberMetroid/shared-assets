@@ -46,9 +46,18 @@ pub fn get_client_ip(
 
     let trimmed = first.trim();
 
-    // If a trusted-proxy allowlist is configured, only honor X-Forwarded-For
-    // when the connecting socket IP is in that allowlist.
-    if !trusted_proxies.is_empty() && !trusted_proxies.iter().any(|net| net.contains(&socket_ip)) {
+    // SAFETY: require an allowlist. Without one, an attacker can forge
+    // X-Forwarded-For to rotate their lockout-key IP at will. This is the
+    // critical behavior change vs. the previous implementation.
+    //
+    // We allow `X-Forwarded-For` only when:
+    //   1. `trusted_proxies` is non-empty, AND
+    //   2. the connecting socket IP is contained in at least one of them.
+    //
+    // If `trusted_proxies` is empty (operator forgot to set
+    // `TRUSTED_PROXY_IPS`), fall through to the socket IP rather than
+    // trusting the spoofable header.
+    if trusted_proxies.is_empty() || !trusted_proxies.iter().any(|net| net.contains(&socket_ip)) {
         return socket_ip.to_string();
     }
 
@@ -79,11 +88,15 @@ mod tests {
     }
 
     #[test]
-    fn proxy_without_trusted_list_uses_xff() {
+    fn proxy_without_trusted_list_uses_socket_ip() {
+        // `trust_proxy=true` with an empty `trusted_proxies` allowlist
+        // must fail-safe to the connecting socket IP. Trusting
+        // X-Forwarded-For under those conditions would let an attacker
+        // rotate their lockout-key IP at will by forging the header.
         let mut headers = HeaderMap::new();
         headers.insert("x-forwarded-for", "203.0.113.5".parse().unwrap());
         let ip = get_client_ip(&headers, socket_v4([10, 0, 0, 1]), true, &[]);
-        assert_eq!(ip, "203.0.113.5");
+        assert_eq!(ip, "10.0.0.1");
     }
 
     #[test]
