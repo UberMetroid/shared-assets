@@ -79,6 +79,42 @@ pub fn lockout_remaining_secs(ip: &str, lockout_duration: std::time::Duration) -
     0
 }
 
+/// Number of failed attempts currently recorded for the given IP.
+///
+/// Does not mutate state. Returns 0 if no attempts have been recorded or
+/// if the lockout window has expired (the entry is cleared on read by
+/// [`is_locked_out`]).
+#[must_use]
+pub fn current_attempts(ip: &str) -> u32 {
+    if let Ok(attempts) = login_attempts().lock() {
+        if let Some(attempt) = attempts.get(ip) {
+            return attempt.count;
+        }
+    }
+    0
+}
+
+/// Number of PIN attempts the IP has remaining before lockout.
+///
+/// Returns 0 when:
+/// - the IP is currently locked out, or
+/// - the IP has already reached `max_attempts` but the lockout window
+///   has not yet expired.
+///
+/// Returns `max_attempts` when no failed attempts are recorded.
+#[must_use]
+pub fn attempts_left(ip: &str, max_attempts: u32, lockout_duration: std::time::Duration) -> u32 {
+    if is_locked_out(ip, max_attempts, lockout_duration) {
+        return 0;
+    }
+    let current = current_attempts(ip);
+    if current >= max_attempts {
+        0
+    } else {
+        max_attempts - current
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,5 +192,53 @@ mod tests {
         }
         let remaining = lockout_remaining_secs("1.2.3.4", lockout);
         assert!(remaining > 0 && remaining <= 60);
+    }
+
+    #[test]
+    fn current_attempts_zero_when_unknown() {
+        reset_for_test();
+        assert_eq!(current_attempts("9.9.9.9"), 0);
+    }
+
+    #[test]
+    fn current_attempts_reflects_recordings() {
+        reset_for_test();
+        record_attempt("9.9.9.9");
+        record_attempt("9.9.9.9");
+        assert_eq!(current_attempts("9.9.9.9"), 2);
+    }
+
+    #[test]
+    fn current_attempts_cleared_after_reset() {
+        reset_for_test();
+        record_attempt("9.9.9.9");
+        reset_attempts("9.9.9.9");
+        assert_eq!(current_attempts("9.9.9.9"), 0);
+    }
+
+    #[test]
+    fn attempts_left_max_when_no_attempts() {
+        reset_for_test();
+        let lockout = std::time::Duration::from_secs(60);
+        assert_eq!(attempts_left("9.9.9.9", 5, lockout), 5);
+    }
+
+    #[test]
+    fn attempts_left_decreases_with_failures() {
+        reset_for_test();
+        let lockout = std::time::Duration::from_secs(60);
+        record_attempt("9.9.9.9");
+        record_attempt("9.9.9.9");
+        assert_eq!(attempts_left("9.9.9.9", 5, lockout), 3);
+    }
+
+    #[test]
+    fn attempts_left_zero_when_locked() {
+        reset_for_test();
+        let lockout = std::time::Duration::from_secs(60);
+        for _ in 0..5 {
+            record_attempt("9.9.9.9");
+        }
+        assert_eq!(attempts_left("9.9.9.9", 5, lockout), 0);
     }
 }
