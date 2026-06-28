@@ -938,6 +938,7 @@ version = "3.0.0"
 dependencies = [
  "constant_time_eq",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
