@@ -19,6 +19,14 @@ use crate::server::ServerConfig;
 pub struct TitleState(pub Arc<ServerConfig>);
 
 /// Middleware that replaces `{{SITE_TITLE}}` in text/html responses.
+///
+/// **Caveats**:
+///
+/// - Buffers the entire response body in memory before replacement.
+///   Fine for small `index.html` files; not suitable for streaming HTML.
+/// - Does not update `Content-Length` after replacement. For chunked
+///   transfer this is irrelevant; for fixed-length responses the
+///   client may see a stale length.
 pub async fn title_injection_layer(
     State(state): State<TitleState>,
     request: Request,

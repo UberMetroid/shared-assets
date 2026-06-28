@@ -1,38 +1,52 @@
 # UberMetroid Shared Assets
 
-Shared styles, Rust components, and backend helpers for the UberMetroid companion
-applications (`beam`, `grid`, `pad`, `todo`, `trace`).
+**v3.0.0 — Shared styles, Rust components, and backend helpers for the
+UberMetroid companion applications (`beam`, `grid`, `pad`, `todo`, `trace`).**
+
+---
+
+## Overview
+
+This repository collects everything that is reused across every UberMetroid
+companion app: the shared CSS themes and layouts, the browser-side Yew UI
+chrome, and the server-side axum middleware, configuration parsing, and PIN
+authentication. Starting with v3.0.0 the Rust side is split into a 3-crate
+Cargo workspace (`shared-core`, `shared-backend`, `shared-frontend`) so each
+consumer can depend on exactly the slice it needs without pulling in the
+other half of the stack.
 
 ---
 
 ## Architecture
 
 ```
-                        ┌──────────────────────────────────────┐
-                        │       shared-assets v3.0.0           │
-                        │     (this repository)               │
-                        └──────────────────────────────────────┘
-                                         ▲
-                ┌────────────────────────┴────────────────────────┐
-                │                                                  │
-       Frontend (Yew / WASM)                          Backend (axum)
-                │                                                  │
-        ┌───────┴────────┐                          ┌──────────────┴─────────────┐
-        │                │                          │                            │
-  components::      theme::Theme              server::ServerConfig        auth::pin_auth_layer
-  Header / Footer  i18n::Language            server::serve                middleware::cors_layer
-                    i18n::strings            server::ServerError          middleware::security_headers
-                                              server::ip                   middleware::title_injection
-                                              server::version              middleware::hsts
-                                              auth::attempts               security::print_unauthorized
+                         ┌──────────────────────────────────────┐
+                         │       shared-assets v3.0.0           │
+                         │     (this repository)                │
+                         └──────────────────────────────────────┘
+                                          ▲
+                 ┌────────────────────────┼────────────────────────┐
+                 │                        │                        │
+       shared-core (types)      shared-backend (axum)     shared-frontend (Yew)
+                 │                        │                        │
+            i18n::Language       server::ServerConfig    components::Header
+            i18n::strings        server::serve            components::Footer
+                                 auth::pin_auth_layer     theme::Theme
+                                 middleware::cors        theme::mapping
+                                 middleware::security_headers
+                                 security::print_unauthorized
+                                          ▲
+                                          │
+                                   styles/  (CSS, consumed by Trunk)
 ```
 
-**Frontend (gated by `frontend` feature, on by default):** Yew components,
-theme management, i18n. Built into the WASM bundle via Trunk.
-
-**Backend (always available):** Configuration parsing, server bootstrap,
-PIN authentication, shared middleware. Imported as a Cargo path / git
-dependency.
+* **`shared-core`** — platform-agnostic primitives (i18n enums and string
+  lookup). No runtime dependencies on a web framework.
+* **`shared-backend`** — axum server primitives: configuration, bootstrap,
+  PIN auth, shared middleware. Depends on `shared-core`.
+* **`shared-frontend`** — Yew 0.23 components, theme management, and browser
+  glue. Depends on `shared-core`. Built into the WASM bundle via Trunk.
+* **`styles/`** — shared CSS, consumed by every companion app's frontend.
 
 ---
 
@@ -40,73 +54,96 @@ dependency.
 
 ```
 shared-assets/
-├── styles/                       Shared CSS, organized by concern
-│   ├── themes/
-│   │   └── themes.css            Super Metroid color tokens & themes
-│   ├── layout/
-│   │   ├── header.css            Top navigation bar
-│   │   └── footer.css            Bottom footer
-│   ├── components/
-│   │   └── body.css              Page body & containers
-│   └── pages/
-│       ├── login.css             PIN entry screen
-│       └── print.css             Print media rules
-└── shared-rust/                  Rust crate (path: `shared-rust/`)
-    ├── Cargo.toml
-    ├── rust-toolchain.toml       Pinned to 1.96.0
-    ├── rustfmt.toml              100-col, reorder imports
-    ├── clippy.toml               Moderate strictness
-    ├── deny.toml                 Supply-chain license policy
-    └── src/
-        ├── lib.rs                Entry point + public re-exports
-        ├── components/           Yew UI chrome
-        │   ├── mod.rs
-        │   ├── header.rs         Top bar (theme/lang/print/logout)
-        │   └── footer.rs         Bottom bar (version/github/children)
-        ├── theme/                Super Metroid theme management
-        │   ├── mod.rs            Theme enum + name/from_name
-        │   ├── icons.rs          SVG icons per theme
-        │   └── mapping.rs        Scheme (light/sepia/dracula/nord) → Theme
-        ├── i18n/                 Internationalization
-        │   ├── mod.rs            Language enum
-        │   └── strings.rs        Centralized UI string lookup
-        └── security/             Backend utilities
-            └── mod.rs            print_unauthorized_console_message
+├── LICENSE                              Apache-2.0
+├── README.md                            this file
+├── CHANGELOG.md                         release notes
+├── styles/                              Shared CSS, organized by concern
+│   ├── themes/themes.css                Super Metroid color tokens & themes
+│   ├── layout/header.css                Top navigation bar
+│   ├── layout/footer.css                Bottom footer
+│   ├── components/body.css              Page body & containers
+│   ├── pages/login.css                  PIN entry screen
+│   └── pages/print.css                  Print media rules
+└── shared-rust/                         3-crate Cargo workspace
+    ├── Cargo.toml                       Workspace manifest
+    ├── rust-toolchain.toml              Pinned to 1.96.0
+    ├── rustfmt.toml                     100-col, edition 2024, reorder imports
+    ├── clippy.toml                      Moderate strictness
+    ├── deny.toml                        Supply-chain license policy
+    ├── shared-core/                     Platform-agnostic primitives
+    │   └── src/
+    │       ├── lib.rs                   Crate root
+    │       └── i18n/                    Internationalization
+    │           ├── mod.rs               Language enum (en/zh/es/de/ja/fr/pt/ru)
+    │           └── strings.rs           Centralized UI string lookup
+    ├── shared-backend/                  Server-side and backend helpers
+    │   └── src/
+    │       ├── lib.rs                   Crate root
+    │       ├── auth/                    PIN authentication
+    │       │   ├── mod.rs               pin_auth_layer factory
+    │       │   ├── attempts.rs          is_locked_out / record_attempt / reset_attempts
+    │       │   ├── session.rs           issue_cookie helpers
+    │       │   └── middleware.rs        axum middleware glue
+    │       ├── server/                  Server bootstrap & config
+    │       │   ├── mod.rs               ServerConfig, serve, ServerError re-exports
+    │       │   ├── config.rs            Env-driven config (port, pin, CORS, ...)
+    │       │   ├── bootstrap.rs         bind + graceful shutdown
+    │       │   ├── error.rs             IntoResponse error type
+    │       │   ├── ip.rs                Trusted-proxy-aware client IP
+    │       │   └── version.rs           CARGO_PKG_VERSION re-export
+    │       ├── middleware/              Shared axum middleware factories
+    │       │   ├── mod.rs               cors / security_headers / title / hsts
+    │       │   ├── cors.rs              CORS layer from ALLOWED_ORIGINS
+    │       │   ├── security_headers.rs  CSP, X-Frame-Options, etc.
+    │       │   ├── title.rs             {{SITE_TITLE}} → config substitution
+    │       │   └── hsts.rs              HSTS when HTTPS
+    │       └── security/                Console-side utilities
+    │           └── mod.rs               print_unauthorized_console_message
+    └── shared-frontend/                 Browser-side and Yew components
+        └── src/
+            ├── lib.rs                   Crate root
+            ├── components/              Yew UI chrome
+            │   ├── mod.rs               Module root
+            │   ├── header.rs            Top bar (theme/lang/print/logout)
+            │   └── footer.rs            Bottom bar (version/github/children)
+            └── theme/                   Super Metroid theme management
+                ├── mod.rs               Theme enum + name/from_name
+                ├── icons.rs             SVG icons per theme
+                └── mapping.rs           Scheme (light/sepia/dracula/nord) → Theme
 ```
 
 ---
 
-## Architectural Guidelines
+## Public API by Crate
 
-To ensure a cohesive user experience and clean deployment in containerized
-environments (like Unraid and Cloudflare tunnels), all companion applications
-must adhere to the following standards.
+| Crate                 | Module(s)         | What it exposes                                                                     |
+| :-------------------- | :---------------- | :---------------------------------------------------------------------------------- |
+| **`shared-core`**     | `i18n`            | `Language` enum + `i18n::strings::lookup` central UI-string translator              |
+| **`shared-backend`**  | `auth`            | `pin_auth_layer`, `auth::attempts::*`, `auth::session::issue_cookie`                |
+| **`shared-backend`**  | `server`          | `ServerConfig`, `serve`, `ServerError`, `server::ip::get_client_ip`, `version`      |
+| **`shared-backend`**  | `middleware`      | `cors_layer`, `security_headers_layer`, `title_injection_layer`, `hsts_layer`       |
+| **`shared-backend`**  | `security`        | `print_unauthorized_console_message`                                                |
+| **`shared-frontend`** | `components`      | `Header`, `Footer` Yew components                                                   |
+| **`shared-frontend`** | `theme`           | `Theme` enum, `theme::mapping::Scheme`, `theme::icons::*`                           |
 
-### 1. Browser Tab & Page Title Standard
-* **Frontend Template**: The `index.html` must define the title tag exactly as:
-  ```html
-  <title>{{SITE_TITLE}}</title>
-  ```
-* **Backend Substitution**: The backend server must intercept requests for `/`
-  and `/index.html`, dynamically replacing the `{{SITE_TITLE}}` placeholder with
-  the user-configured title before serving the HTML.
-* **Dynamic Updates**: The frontend WebAssembly (Yew) application must update
-  the document title using *only* the site title (e.g.,
-  `document.set_title(&self.site_title)`). **No prefix or suffix flavor text**
-  (such as board names, active queries, or tool descriptions) should be added
-  to the tab title during normal usage.
+---
 
-### 2. Environment Configurations
+## CSS Styles
 
-All applications should support:
-* `SITE_TITLE`: General environment variable to configure the application name.
-* `<APP_NAME>_SITE_TITLE`: App-specific override (e.g., `GRID_SITE_TITLE`,
-  `TODO_SITE_TITLE`).
+The shared stylesheets live under `styles/`, grouped by concern:
 
-### 3. Shared Styling Assets
+* `styles/themes/themes.css` — design tokens and the Super Metroid themes
+  (`crateria`, `brinstar`, `norfair`, `wrecked_ship`, `maridia`, `tourian`).
+  Names are referenced by `shared_frontend::theme::Theme`.
+* `styles/layout/header.css` — top navigation bar (paired with
+  `shared_frontend::components::Header`).
+* `styles/layout/footer.css` — bottom footer (paired with
+  `shared_frontend::components::Footer`).
+* `styles/components/body.css` — page body, containers, common components.
+* `styles/pages/login.css` — PIN entry screen.
+* `styles/pages/print.css` — print media rules.
 
-Stylesheets are organized by concern under `styles/`. Each app wires them via
-Trunk's `<link data-trunk rel="css" ...>` in `frontend/index.html`:
+Each companion app wires them in `frontend/index.html` via Trunk:
 
 ```html
 <link data-trunk rel="css" href="Assets/shared-assets/styles/themes/themes.css" />
@@ -117,71 +154,106 @@ Trunk's `<link data-trunk rel="css" ...>` in `frontend/index.html`:
 <link data-trunk rel="css" href="Assets/shared-assets/styles/pages/print.css" />
 ```
 
-The CSS file purposes:
-* `styles/themes/themes.css` — design tokens and 5 Super Metroid themes
-  (`crateria`, `brinstar`, `norfair`, `wrecked_ship`, `maridia`, `tourian`).
-  Names are referenced by [`crate::theme::Theme`].
-* `styles/layout/header.css` — top navigation bar (used with
-  [`crate::components::header::Header`]).
-* `styles/layout/footer.css` — bottom footer (used with
-  [`crate::components::footer::Footer`]).
+---
+
+## Cargo Dependency Examples
+
+A consumer app declares only the crates it actually uses. The canonical
+path inside every companion app's working tree is
+`Assets/shared-assets/shared-rust/<crate>`.
+
+```toml
+# Backend (Cargo.toml)
+shared-core    = { path = "Assets/shared-assets/shared-rust/shared-core" }
+shared-backend = { path = "Assets/shared-assets/shared-rust/shared-backend" }
+
+# Frontend (Cargo.toml)
+shared-frontend = { path = "Assets/shared-assets/shared-rust/shared-frontend" }
+```
+
+`shared-core` is pulled in transitively by the other two, so a consumer
+only needs to declare it explicitly when it consumes core types directly
+(for example, `Language` in the backend's session code).
+
+---
+
+## Architectural Guidelines
+
+To ensure a cohesive user experience and clean deployment in containerized
+environments (like Unraid and Cloudflare tunnels), all companion applications
+must adhere to the following standards.
+
+### 1. Browser Tab & Page Title Standard
+
+* **Frontend Template**: The `index.html` must define the title tag exactly as:
+  ```html
+  <title>{{SITE_TITLE}}</title>
+  ```
+* **Backend Substitution**: The backend server (built on `shared-backend`) must
+  intercept requests for `/` and `/index.html`, dynamically replacing the
+  `{{SITE_TITLE}}` placeholder with the user-configured title before serving
+  the HTML. The `shared_backend::middleware::title_injection_layer` factory
+  does this.
+* **Dynamic Updates**: The frontend WebAssembly (Yew) application, built on
+  `shared-frontend`, must update the document title using *only* the site
+  title (e.g., `document.set_title(&self.site_title)`). **No prefix or
+  suffix flavor text** (such as board names, active queries, or tool
+  descriptions) should be added to the tab title during normal usage.
+
+### 2. Environment Configurations
+
+All applications should support:
+
+* `SITE_TITLE`: General environment variable to configure the application
+  name.
+* `<APP_NAME>_SITE_TITLE`: App-specific override (e.g., `GRID_SITE_TITLE`,
+  `TODO_SITE_TITLE`).
+
+`shared-backend` parses these (along with CORS, port, PIN, lockout, cookie
+age, etc.) into a single `ServerConfig` value via `ServerConfig::from_env`.
+
+### 3. Shared Styling Assets
+
+Stylesheets are organized by concern under `styles/` and shared by every
+companion app. Each app wires them via Trunk's
+`<link data-trunk rel="css" ...>` in `frontend/index.html` (see the snippet
+above).
+
+* `styles/themes/themes.css` — design tokens and 5 Super Metroid themes.
+  Names are referenced by `shared_frontend::theme::Theme`.
+* `styles/layout/header.css` — top navigation bar (paired with
+  `shared_frontend::components::Header`).
+* `styles/layout/footer.css` — bottom footer (paired with
+  `shared_frontend::components::Footer`).
 * `styles/components/body.css` — page body, containers, common components.
 * `styles/pages/login.css` — PIN entry screen.
 * `styles/pages/print.css` — print media rules.
 
-### 4. Shared Rust Crate (`shared-rust`)
+### 4. Shared Rust Crates (`shared-rust/`)
 
-A small Rust crate consumed by every companion app's backend and frontend.
+The `shared-rust/` workspace contains three crates, each with a tightly
+scoped purpose:
 
-#### Cargo Dependency
-
-**Backend:**
-```toml
-# backend/Cargo.toml
-shared-assets = { path = "../frontend/Assets/shared-assets/shared-rust" }
-```
-
-**Frontend:**
-```toml
-# frontend/Cargo.toml
-shared-assets = { path = "Assets/shared-assets/shared-rust" }
-```
-
-#### Public API
-
-| Module | Purpose | When to use |
-| :--- | :--- | :--- |
-| [`components::Header`] | Top navigation bar Yew component | Always |
-| [`components::Footer`] | Bottom footer Yew component | Always |
-| [`theme::Theme`] | Super Metroid theme enum (replaces string literals) | When storing/loading the active theme |
-| [`theme::mapping::Scheme`] | User-facing scheme name → `Theme` mapping | When rendering the theme picker |
-| [`i18n::Language`] | Supported UI language enum | When storing/loading the active language |
-| [`i18n::strings::lookup`] | Centralized UI string translation | When displaying any translated text |
-| [`security::print_unauthorized_console_message`] | Anti-shell alert | In `src/bin/sh.rs` stub only |
-
-#### Feature Flags
-
-```toml
-[features]
-default = ["frontend"]   # Pulls in Yew + web-sys + serde
-```
-
-Backend consumers that don't need the frontend stack can disable defaults:
-```toml
-shared-assets = { path = "...", default-features = false }
-```
+| Crate                 | Used by        | Pulls in                                                                  |
+| :-------------------- | :------------- | :------------------------------------------------------------------------ |
+| `shared-core`         | both           | `serde`, `constant_time_eq`                                               |
+| `shared-backend`      | backend server | `axum`, `tokio`, `tower-http`, `tracing`, `ipnet`, `thiserror`, `anyhow` |
+| `shared-frontend`     | frontend WASM  | `yew 0.23`, `web-sys =0.3.98`, `serde`                                    |
 
 #### Example: Adding a New Translated String
 
-1. Add a variant to `i18n::strings::StringKey`.
+1. Add a variant to `shared_core::i18n::strings::StringKey`.
 2. Add translations for every language in the `lookup` match.
-3. Call `lookup(StringKey::YourNewKey, language)` from the component.
+3. Call `lookup(StringKey::YourNewKey, language)` from the component (or
+   backend handler, if the value is rendered server-side).
 
 #### Example: Switching a Component to Use the Theme Enum
 
 Replace string literals like `"brinstar"` with:
+
 ```rust
-use shared_assets::theme::Theme;
+use shared_frontend::theme::Theme;
+
 Theme::Brinstar.name()  // returns "brinstar" for CSS / localStorage
 ```
 
@@ -189,21 +261,43 @@ Theme::Brinstar.name()  // returns "brinstar" for CSS / localStorage
 
 ## Development
 
-### Build & Test
+All commands run from `shared-rust/`:
 
 ```bash
 cd shared-rust
-cargo build
-cargo test         # 22 unit tests + 1 doctest
-cargo clippy       # 0 warnings
+
+# Format check (100-col, edition 2024 — see rustfmt.toml)
 cargo fmt --check
+
+# Lints (moderate strictness — see clippy.toml)
+cargo clippy --workspace --all-targets
+
+# Tests across the workspace (68 unit tests across the 3 crates)
+cargo test --workspace
+
+# Frontend WASM build (requires the wasm32-unknown-unknown target)
+cargo build -p shared-frontend --target wasm32-unknown-unknown
 ```
 
-### Coding Standards
+The workspace is pinned via `rust-toolchain.toml` (Rust 1.96.0).
 
-* Files limited to 250 lines
-* Subdirectories for each major concern
-* 100-column line width (`rustfmt.toml`)
-* All public API documented with `///` doc comments
-* Defensive parsing (`Option`/`Result` over panic)
-* Tests for round-trip parsing, uniqueness, and coverage
+---
+
+## Coding Standards
+
+* Files limited to **250 lines** (enforced by CI).
+* **100-column** line width (`rustfmt.toml`).
+* Rust **edition 2024** across every member crate.
+* All public API documented with `///` doc comments.
+* Defensive parsing — prefer `Option` / `Result` over `panic!` / `unwrap()`
+  on untrusted input.
+* Tests for round-trip parsing, uniqueness, and coverage of edge cases.
+* `cargo fmt --check` and `cargo clippy --workspace --all-targets` must
+  pass with zero warnings.
+
+---
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE). Copyright 2026
+UberMetroid.

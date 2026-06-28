@@ -4,6 +4,12 @@ version = "3.0.0"
 edition = "2024"
 description = "Server-side and backend shared assets for UberMetroid companion apps."
 license = "Apache-2.0"
+repository = "https://github.com/UberMetroid/shared-assets"
+homepage = "https://github.com/UberMetroid/shared-assets"
+documentation = "https://github.com/UberMetroid/shared-assets"
+readme = "../../README.md"
+keywords = ["axum", "server", "middleware", "authentication", "cors"]
+categories = ["web-programming::http-server", "authentication", "api-bindings"]
 
 [dependencies]
 shared-core = { path = "../shared-core" }

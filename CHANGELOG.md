@@ -25,10 +25,10 @@ shared_assets::print_unauthorized_console_message();
 
 **After (3.x):**
 ```rust
-use shared_assets::security::print_unauthorized_console_message;
-use shared_assets::Header;
+use shared_backend::security::print_unauthorized_console_message;
+use shared_frontend::components::Header;
 
-shared_assets::security::print_unauthorized_console_message();
+shared_backend::security::print_unauthorized_console_message();
 ```
 
 **Cargo dependency:**
@@ -70,7 +70,7 @@ shared-assets = { path = "..." }
 #### Changed
 
 - Bumped edition 2021 → 2024 (let-chains used throughout)
-- Bumped `web-sys` from exact pin `=0.3.98` to `>=0.3.98, <0.4`
+- `web-sys` pinned to `=0.3.98` (matches the Yew 0.23 expected version)
 - `ipnet`, `tokio`, `tower-http`, `axum`, `thiserror`, `anyhow`, `dotenvy`,
   `constant_time_eq`, `tracing`, `http-body-util` are now direct dependencies
   of the shared-assets crate (consumers don't need to declare them just to use

@@ -89,7 +89,7 @@ header {
 }
 
 .language-select {
-    background-color: var(--container-bg, var(--container, var(--textarea-bg)));
+    background-color: var(--container-bg, var(--container));
     color: var(--text-color, var(--text));
     border: 1px solid var(--border-color, var(--border));
     border-radius: 8px;

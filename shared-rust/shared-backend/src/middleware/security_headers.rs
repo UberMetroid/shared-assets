@@ -13,6 +13,12 @@ use axum::middleware::Next;
 use axum::response::Response;
 
 /// Add security headers to every response.
+///
+/// The CSP includes `'unsafe-eval'` because Yew's CSR runtime requires it
+/// in some build configurations.
+///
+/// `connect-src` is intentionally restricted to `'self' ws: wss:` so that
+/// client-side fetches are limited to the same origin or WebSocket-only.
 pub async fn security_headers_layer(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
@@ -36,7 +42,7 @@ pub async fn security_headers_layer(request: Request, next: Next) -> Response {
              style-src 'self' 'unsafe-inline'; \
              script-src 'self' 'unsafe-inline' 'unsafe-eval'; \
              img-src 'self' data: blob: https:; \
-             connect-src 'self' ws: wss: http: https:; \
+             connect-src 'self' ws: wss:; \
              font-src 'self'; \
              manifest-src 'self';",
         ),

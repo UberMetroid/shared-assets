@@ -15,4 +15,4 @@ pub use attempts::{
     record_attempt, reset_attempts,
 };
 pub use middleware::{PinState, pin_auth_layer};
-pub use session::issue_cookie;
+pub use session::{issue_cookie, read_pin_cookie};

@@ -30,6 +30,7 @@ pub struct ServerConfig {
     pub max_attempts: u32,
     pub lockout_time_minutes: u64,
     pub cookie_max_age_hours: i64,
+    pub shutdown_drain_seconds: u64,
 }
 
 impl ServerConfig {
@@ -90,6 +91,7 @@ impl ServerConfig {
             max_attempts: parse_or("MAX_ATTEMPTS", 5u32),
             lockout_time_minutes: parse_or("LOCKOUT_TIME_MINUTES", 15u64),
             cookie_max_age_hours: parse_or("COOKIE_MAX_AGE_HOURS", 24i64),
+            shutdown_drain_seconds: parse_or("SHUTDOWN_DRAIN_SECONDS", 5u64),
         }
     }
 
@@ -111,10 +113,19 @@ fn parse_or<T>(name: &str, default: T) -> T
 where
     T: FromStr,
 {
-    env::var(name)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(default)
+    match env::var(name) {
+        Ok(v) => match v.parse() {
+            Ok(parsed) => parsed,
+            Err(_) => {
+                tracing::warn!(
+                    target: "config",
+                    "{name}={v:?} is not a valid value; using default",
+                );
+                default
+            }
+        },
+        Err(_) => default,
+    }
 }
 
 /// Read a boolean env var. Truthy = `"true"` or `"on"`.

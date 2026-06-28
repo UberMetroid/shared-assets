@@ -2,6 +2,15 @@
    Standardized Print Stylesheet
    ========================================== */
 
+/*
+ * Apps should use these canonical class names for interactive controls
+ * that should be hidden in print mode:
+ *   .app-add-btn       — "add" / "create" buttons (e.g. add task, add column)
+ *   .app-add-control   — container wrapping add buttons (e.g. add-column form)
+ *   .app-remove-btn    — "remove" / "delete" buttons
+ *   .app-drag-indicator — visual drag handles / drop targets
+ */
+
 @media print {
     header,
     footer,
@@ -14,10 +23,10 @@
     #theme-toggle,
     #print-button,
     #logout-button,
-    .add-task,
-    .add-column-container,
-    .remove-column,
-    .move-indicator {
+    .app-add-btn,
+    .app-add-control,
+    .app-remove-btn,
+    .app-drag-indicator {
         display: none !important;
     }
     

@@ -25,7 +25,8 @@ pub fn cors_layer(config: &ServerConfig) -> CorsLayer {
         HeaderName::from_static("x-pin"),
     ];
 
-    if config.allowed_origins.trim() == "*" {
+    let trimmed = config.allowed_origins.trim();
+    if trimmed == "*" || trimmed.is_empty() {
         return CorsLayer::permissive();
     }
 
@@ -63,6 +64,7 @@ mod tests {
             max_attempts: 5,
             lockout_time_minutes: 15,
             cookie_max_age_hours: 24,
+            shutdown_drain_seconds: 5,
         }
     }
 
@@ -80,7 +82,7 @@ mod tests {
 
     #[test]
     fn empty_origins_falls_back_to_wildcard() {
-        // Empty string should not panic.
+        // Empty string should not panic; falls back to permissive.
         let _ = cors_layer(&cfg_with(""));
     }
 }

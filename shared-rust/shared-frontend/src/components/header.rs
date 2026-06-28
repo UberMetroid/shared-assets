@@ -9,11 +9,9 @@ use yew::prelude::*;
 #[derive(Properties, PartialEq)]
 pub struct HeaderProps {
     pub site_title: String,
-    /// Theme name (e.g. `"crateria"`, `"brinstar"`). Accepted as `String`
-    /// (or anything that converts to one) so call sites can pass either
-    /// a stored string from a cookie/localStorage or a `Theme` enum
-    /// directly. We parse it into the `Theme` enum inside the
-    /// component; an unrecognised name falls back to `Theme::default()`.
+    /// Theme name (e.g. `"crateria"`, `"brinstar"`). Parsed into the
+    /// [`Theme`] enum inside the component; unrecognised names fall
+    /// back to [`Theme::default`].
     #[prop_or_default]
     pub theme: String,
     pub language: Language,
@@ -29,13 +27,11 @@ pub struct HeaderProps {
     pub theme_toggle_tooltip: String,
     #[prop_or_default]
     pub print_tooltip: String,
-    #[prop_or_default]
-    pub on_print: Callback<MouseEvent>,
+    pub on_print: Option<Callback<MouseEvent>>,
 
-    pub disable_print: bool,
     pub enable_translation: bool,
     pub enable_themes: bool,
-    pub enable_print: bool,
+    pub print_disabled: bool,
 }
 
 /// Top-of-page navigation bar shared by all companion apps.
@@ -72,15 +68,13 @@ pub fn header(props: &HeaderProps) -> Html {
         props.language,
     );
 
-    let on_print = if props.on_print == Callback::default() {
+    let on_print = props.on_print.clone().unwrap_or_else(|| {
         Callback::from(|_| {
             if let Some(window) = web_sys::window() {
                 let _ = window.print();
             }
         })
-    } else {
-        props.on_print.clone()
-    };
+    });
 
     // Parse the theme name into the `Theme` enum. Accept either the
     // kebab-case CSS names ("wrecked_ship") or any other value the
@@ -96,7 +90,7 @@ pub fn header(props: &HeaderProps) -> Html {
             <div class="header-right">
                 {language_picker(props.enable_translation, props.language, on_change_lang)}
                 {theme_toggle(props.enable_themes, props.toggle_theme.clone(), theme, theme_tooltip)}
-                {print_button(props.enable_print, props.disable_print, on_print, print_tooltip)}
+                {print_button(props.print_disabled, on_print, print_tooltip)}
                 {logout_button(props.pin_required, disabled, onclick_logout, logout_tooltip)}
             </div>
         </header>
@@ -157,15 +151,7 @@ fn theme_toggle(
     }
 }
 
-fn print_button(
-    enabled: bool,
-    disabled: bool,
-    on_click: Callback<MouseEvent>,
-    tooltip: String,
-) -> Html {
-    if !enabled {
-        return html! {};
-    }
+fn print_button(disabled: bool, on_click: Callback<MouseEvent>, tooltip: String) -> Html {
     html! {
         <button id="print-button" class="icon-button"
                 onclick={on_click}

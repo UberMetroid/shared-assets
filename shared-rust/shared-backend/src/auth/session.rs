@@ -36,6 +36,11 @@ pub fn read_cookie(request: &axum::extract::Request) -> Option<String> {
     None
 }
 
+/// Extract a PIN value from the request cookie (if any).
+pub fn read_pin_cookie(request: &axum::extract::Request) -> Option<String> {
+    read_cookie(request)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,6 +62,7 @@ mod tests {
             max_attempts: 5,
             lockout_time_minutes: 15,
             cookie_max_age_hours: 24,
+            shutdown_drain_seconds: 5,
         }
     }
 

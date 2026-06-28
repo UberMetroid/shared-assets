@@ -87,7 +87,7 @@ body.layout-fit {
     box-shadow: var(--shadow);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    transition: all 0.3s ease;
+    transition: all var(--transition);
     width: 100%;
 }
 

@@ -23,16 +23,18 @@ pub async fn serve(config: ServerConfig, app: Router) -> Result<(), std::io::Err
     tracing::info!(target: "bootstrap", "pin_enabled={}", config.pin_enabled());
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
+    let drain = Duration::from_secs(config.shutdown_drain_seconds);
     axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown_signal())
+    .with_graceful_shutdown(shutdown_signal(drain))
     .await
 }
 
-/// Wait for SIGINT or SIGTERM (whichever comes first), with a 5s drain.
-async fn shutdown_signal() {
+/// Wait for SIGINT or SIGTERM (whichever comes first), then drain for
+/// `drain` seconds before exiting.
+async fn shutdown_signal(drain: Duration) {
     use tokio::signal::unix::{SignalKind, signal};
 
     let mut sigint = signal(SignalKind::interrupt()).expect("install SIGINT handler");
@@ -43,8 +45,8 @@ async fn shutdown_signal() {
         _ = sigterm.recv() => tracing::info!("received SIGTERM"),
     }
 
-    tracing::info!("draining connections (5s)");
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    tracing::info!(target: "bootstrap", "draining connections ({}s)", drain.as_secs());
+    tokio::time::sleep(drain).await;
 }
 
 #[cfg(test)]
@@ -53,10 +55,11 @@ mod tests {
 
     #[test]
     fn shutdown_signal_compiles() {
-        // Smoke test: just verify the function exists and is callable.
-        // We can't easily test the actual SIGINT handling in unit tests.
+        // Smoke test: just verify the function exists and has the expected
+        // signature. We can't easily test the actual SIGINT handling in unit
+        // tests.
         fn _exists() {
-            let _ = shutdown_signal;
+            let _: fn(Duration) -> _ = shutdown_signal;
         }
     }
 }

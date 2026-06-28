@@ -51,6 +51,7 @@ fn with_env<F: FnOnce()>(vars: &[(&str, &str)], f: F) {
         "COOKIE_MAX_AGE_HOURS",
         "TRUST_PROXY",
         "TRUSTED_PROXY_IPS",
+        "SHUTDOWN_DRAIN_SECONDS",
     ];
     let originals_all: Vec<(&str, Option<String>)> = all_keys
         .iter()
@@ -91,5 +92,6 @@ fn minimal_config() -> ServerConfig {
         max_attempts: 5,
         lockout_time_minutes: 15,
         cookie_max_age_hours: 24,
+        shutdown_drain_seconds: 5,
     }
 }

@@ -10,7 +10,6 @@
 use super::attempts;
 use crate::server::{ServerConfig, get_client_ip};
 use axum::extract::{ConnectInfo, Request, State};
-use axum::http::header::COOKIE;
 use axum::middleware::Next;
 use axum::response::Response;
 use constant_time_eq::constant_time_eq;
@@ -55,12 +54,14 @@ pub async fn pin_auth_layer(
 
     if attempts::is_locked_out(&ip, config.max_attempts, lockout) {
         let remaining = attempts::lockout_remaining_secs(&ip, lockout);
-        tracing::warn!(target: "auth", "IP {ip} locked out for {remaining}s more");
-        let body = format!("locked_out:{remaining}");
+        tracing::warn!(
+            target: "auth",
+            "IP {ip} locked out for {remaining}s more; rejecting request with empty body"
+        );
         return Err(axum::http::Response::builder()
             .status(axum::http::StatusCode::TOO_MANY_REQUESTS)
             .header("content-type", "text/plain")
-            .body(axum::body::Body::from(body))
+            .body(axum::body::Body::empty())
             .unwrap());
     }
 
@@ -92,14 +93,7 @@ fn extract_pin(request: &Request) -> Option<String> {
     {
         return Some(p.to_string());
     }
-    let cookie_header = request.headers().get(COOKIE)?.to_str().ok()?;
-    for pair in cookie_header.split(';') {
-        let pair = pair.trim();
-        if let Some(rest) = pair.strip_prefix("pin=") {
-            return Some(rest.to_string());
-        }
-    }
-    None
+    crate::auth::read_pin_cookie(request)
 }
 
 fn unauthorized_response() -> Response {
@@ -126,8 +120,10 @@ mod tests {
     #[test]
     fn extract_pin_from_cookie() {
         let mut req = AxumRequest::default();
-        req.headers_mut()
-            .insert(COOKIE, "pin=abcd; other=foo".parse().unwrap());
+        req.headers_mut().insert(
+            axum::http::header::COOKIE,
+            "pin=abcd; other=foo".parse().unwrap(),
+        );
         assert_eq!(extract_pin(&req), Some("abcd".to_string()));
     }
 
