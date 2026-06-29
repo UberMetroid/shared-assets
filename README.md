@@ -1,4 +1,4 @@
-# UberMetroid Shared Assets
+# UberMetroid Shared Assets <img src="assets/icon.jpg" width="48" height="48" alt="shared-assets logo" align="right">
 
 **v3.0.1 — Shared styles, Rust components, and backend helpers for the
 UberMetroid companion applications (`beam`, `grid`, `pad`, `todo`, `trace`).**
